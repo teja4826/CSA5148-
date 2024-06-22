@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+// Function to encrypt plaintext using Vigenere cipher
+void vigenereEncrypt(char *plaintext, char *keyword) {
+    int i, j;
+    int keylen = strlen(keyword);
+    int textlen = strlen(plaintext);
+
+    for (i = 0, j = 0; i < textlen; ++i, ++j) {
+        if (j == keylen) {
+            j = 0;
+        }
+        // Encrypt uppercase characters
+        if (isupper(plaintext[i])) {
+            plaintext[i] = ((plaintext[i] - 'A' + keyword[j] - 'A') % 26) + 'A';
+        }
+        // Encrypt lowercase characters
+        else if (islower(plaintext[i])) {
+            plaintext[i] = ((plaintext[i] - 'a' + keyword[j] - 'A') % 26) + 'a';
+        }
+    }
+}
+
+// Function to decrypt ciphertext using Vigenere cipher
+void vigenereDecrypt(char *ciphertext, char *keyword) {
+    int i, j;
+    int keylen = strlen(keyword);
+    int textlen = strlen(ciphertext);
+
+    for (i = 0, j = 0; i < textlen; ++i, ++j) {
+        if (j == keylen) {
+            j = 0;
+        }
+        // Decrypt uppercase characters
+        if (isupper(ciphertext[i])) {
+            ciphertext[i] = ((ciphertext[i] - 'A' - (keyword[j] - 'A') + 26) % 26) + 'A';
+        }
+        // Decrypt lowercase characters
+        else if (islower(ciphertext[i])) {
+            ciphertext[i] = ((ciphertext[i] - 'a' - (keyword[j] - 'A') + 26) % 26) + 'a';
+        }
+    }
+}
+
+int main() {
+    char plaintext[1000], ciphertext[1000], decryptedtext[1000];
+    char keyword[100];
+
+    printf("Enter plaintext: ");
+    fgets(plaintext, sizeof(plaintext), stdin);
+    plaintext[strcspn(plaintext, "\n")] = '\0';
+
+    printf("Enter keyword: ");
+    fgets(keyword, sizeof(keyword), stdin);
+    keyword[strcspn(keyword, "\n")] = '\0';
+
+    // Remove non-alphabet characters from keyword
+    int len = strlen(keyword);
+    for (int i = 0; i < len; ++i) {
+        if (!isalpha(keyword[i])) {
+            for (int j = i; j < len; ++j) {
+                keyword[j] = keyword[j + 1];
+            }
+            --len;
+            --i;
+        }
+    }
+
+    // Encrypt plaintext using Vigenere cipher
+    strcpy(ciphertext, plaintext);
+    vigenereEncrypt(ciphertext, keyword);
+    printf("\nEncrypted text: %s\n", ciphertext);
+
+    // Decrypt ciphertext using Vigenere cipher
+    strcpy(decryptedtext, ciphertext);
+    vigenereDecrypt(decryptedtext, keyword);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    return 0;
+}
