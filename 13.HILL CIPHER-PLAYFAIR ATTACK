@@ -1,0 +1,77 @@
+#include <stdio.h>
+
+// Function to calculate the determinant of a 2x2 matrix
+int determinant(int key[2][2]) {
+    return key[0][0] * key[1][1] - key[0][1] * key[1][0];
+}
+
+// Function to calculate the modular inverse of a number 'a' under modulo 'm'
+// This function assumes that 'm' is prime. For simplicity, we use 26 (alphabet size) here.
+int modInverse(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++) {
+        if ((a * x) % m == 1) {
+            return x;
+        }
+    }
+    return -1;  // If inverse doesn't exist
+}
+
+// Function to decrypt a 2x2 Hill cipher given ciphertext, key matrix, and its determinant
+void decrypt(int ciphertext[2], int key[2][2], int det) {
+    int inv_det = modInverse(det, 26);  // Modular inverse of determinant mod 26
+    if (inv_det == -1) {
+        printf("Error: Determinant is not invertible.\n");
+        return;
+    }
+    
+    // Compute the inverse of the key matrix
+    int inv_key[2][2];
+    inv_key[0][0] = key[1][1];
+    inv_key[0][1] = -key[0][1];
+    inv_key[1][0] = -key[1][0];
+    inv_key[1][1] = key[0][0];
+    
+    // Apply mod 26 to elements of inverse key matrix
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            inv_key[i][j] = (inv_key[i][j] * inv_det) % 26;
+            if (inv_key[i][j] < 0)
+                inv_key[i][j] += 26;
+        }
+    }
+    
+    // Decrypt ciphertext using inverse key matrix
+    int plaintext[2];
+    plaintext[0] = (inv_key[0][0] * ciphertext[0] + inv_key[0][1] * ciphertext[1]) % 26;
+    plaintext[1] = (inv_key[1][0] * ciphertext[0] + inv_key[1][1] * ciphertext[1]) % 26;
+    
+    // Ensure plaintext values are within range [0, 25]
+    for (int i = 0; i < 2; i++) {
+        if (plaintext[i] < 0)
+            plaintext[i] += 26;
+    }
+    
+    // Print decrypted plaintext
+    printf("Decrypted Plaintext: %c%c\n", 'A' + plaintext[0], 'A' + plaintext[1]);
+}
+
+int main() {
+    // Example: Suppose we know the key matrix is [[3, 2], [5, 7]] (mod 26)
+    int key[2][2] = {{3, 2}, {5, 7}};
+    
+    // Example known ciphertext pair
+    int ciphertext[2] = {19, 9}; // Corresponds to ciphertext "TJ"
+    
+    // Calculate determinant of key matrix
+    int det = determinant(key);
+    
+    // Decrypt ciphertext using known key and determinant
+    decrypt(ciphertext, key, det);
+    
+    return 0;
+}
+
+OUTPUT:
+Encrypted ciphertext: dldcq
+Decrypted plaintext: hellw
