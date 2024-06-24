@@ -1,0 +1,159 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+
+// English letter frequencies (from https://en.wikipedia.org/wiki/Letter_frequency)
+const float english_frequencies[ALPHABET_SIZE] = {
+    0.08167, 0.01492, 0.02782, 0.04253, 0.12702,  // A, B, C, D, E
+    0.02228, 0.02015, 0.06094, 0.06966, 0.00153,  // F, G, H, I, J
+    0.00772, 0.04025, 0.02406, 0.06749, 0.07507,  // K, L, M, N, O
+    0.01929, 0.00095, 0.05987, 0.06327, 0.09056,  // P, Q, R, S, T
+    0.02758, 0.00978, 0.02360, 0.00150, 0.01974   // U, V, W, X, Y, Z
+};
+
+// Function to count occurrences of each letter in the given text
+void countLetterFrequency(const char *text, float freq[]) {
+    int len = strlen(text);
+    int total_letters = 0;
+    for (int i = 0; i < len; ++i) {
+        char ch = toupper(text[i]);
+        if (isalpha(ch)) {
+            freq[ch - 'A']++;
+            total_letters++;
+        }
+    }
+    // Convert counts to frequencies
+    for (int i = 0; i < ALPHABET_SIZE; ++i) {
+        freq[i] /= total_letters;
+    }
+}
+
+// Function to decrypt ciphertext based on a given key
+void decryptMonoalphabeticSubstitution(const char *ciphertext, const char key[], char *plaintext) {
+    int len = strlen(ciphertext);
+    for (int i = 0; i < len; ++i) {
+        char ch = toupper(ciphertext[i]);
+        if (isalpha(ch)) {
+            plaintext[i] = isupper(ch) ? key[ch - 'A'] : tolower(key[ch - 'A']);
+        } else {
+            plaintext[i] = ch; // Non-alphabetic characters remain unchanged
+        }
+    }
+    plaintext[len] = '\0'; // Add null terminator to end the string
+}
+
+// Function to calculate the Chi-Square statistic
+float chiSquareStatistic(const float observed[], const float expected[]) {
+    float chi_square = 0.0;
+    for (int i = 0; i < ALPHABET_SIZE; ++i) {
+        if (expected[i] > 0) {
+            chi_square += (observed[i] - expected[i]) * (observed[i] - expected[i]) / expected[i];
+        }
+    }
+    return chi_square;
+}
+
+// Function to perform frequency analysis attack and print top possible plaintexts
+void frequencyAttack(const char *ciphertext, int top) {
+    float observed_freq[ALPHABET_SIZE] = {0};
+    countLetterFrequency(ciphertext, observed_freq);
+    
+    // Calculate Chi-Square statistic for each possible shift
+    float chi_square[ALPHABET_SIZE];
+    for (int shift = 0; shift < ALPHABET_SIZE; ++shift) {
+        float shifted_freq[ALPHABET_SIZE] = {0};
+        // Shift frequencies according to current shift value
+        for (int i = 0; i < ALPHABET_SIZE; ++i) {
+            int shifted_index = (i + shift) % ALPHABET_SIZE;
+            shifted_freq[shifted_index] = observed_freq[i];
+        }
+        // Calculate Chi-Square statistic
+        chi_square[shift] = chiSquareStatistic(shifted_freq, english_frequencies);
+    }
+    
+    // Find the top plaintexts based on Chi-Square statistic
+    printf("Top possible plaintexts (in order of likelihood):\n");
+    for (int rank = 1; rank <= top; ++rank) {
+        // Find minimum Chi-Square value
+        float min_chi_square = chi_square[0];
+        int min_index = 0;
+        for (int i = 1; i < ALPHABET_SIZE; ++i) {
+            if (chi_square[i] < min_chi_square) {
+                min_chi_square = chi_square[i];
+                min_index = i;
+            }
+        }
+        
+        // Decrypt ciphertext using the key corresponding to the minimum Chi-Square value
+        char plaintext[strlen(ciphertext) + 1];
+        char key[ALPHABET_SIZE];
+        for (int i = 0; i < ALPHABET_SIZE; ++i) {
+            key[i] = 'A' + (i + min_index) % ALPHABET_SIZE;
+        }
+        decryptMonoalphabeticSubstitution(ciphertext, key, plaintext);
+        
+        // Print the plaintext and corresponding key
+        printf("%d. Key: %s\n   Plaintext: %s\n   Chi-Square: %.4f\n\n", rank, key, plaintext, min_chi_square);
+        
+        // Set the used Chi-Square value to a high value to avoid selecting it again
+        chi_square[min_index] = 1000.0;
+    }
+}
+
+int main() {
+    char ciphertext[] = "Wklv lv dq rqob prgh."; // Example ciphertext
+    int top = 10; // Number of top possible plaintexts to display
+    
+    printf("Performing letter frequency attack on the monoalphabetic substitution cipher:\n");
+    printf("Ciphertext: %s\n\n", ciphertext);
+    
+    frequencyAttack(ciphertext, top);
+    
+    return 0;
+}
+
+OUTPUT:
+
+Top possible plaintexts (in order of likelihood):
+1. Key: XYZABCDEFGHIJKLMNOPQRSTUVW{▀ 
+   Plaintext: THIS IS AN ONLY MODE.
+   Chi-Square: 0.6451
+
+2. Key: LMNOPQRSTUVWXYZABCDEFGHIJK{▀ 
+   Plaintext: HVWG WG OB CBZM ACRS.
+   Chi-Square: 3.0234
+
+3. Key: EFGHIJKLMNOPQRSTUVWXYZABCD{▀ 
+   Plaintext: AOPZ PZ HU VUSF TVKL.
+   Chi-Square: 3.2706
+
+4. Key: WXYZABCDEFGHIJKLMNOPQRSTUV{▀ 
+   Plaintext: SGHR HR ZM NMKX LNCD.
+   Chi-Square: 4.2176
+
+5. Key: DEFGHIJKLMNOPQRSTUVWXYZABC{▀ 
+   Plaintext: ZNOY OY GT UTRE SUJK.
+   Chi-Square: 4.3316
+
+6. Key: RSTUVWXYZABCDEFGHIJKLMNOPQ{▀ 
+   Plaintext: NBCM CM UH IHFS GIXY.
+   Chi-Square: 4.3853
+
+7. Key: QRSTUVWXYZABCDEFGHIJKLMNOP{▀ 
+   Plaintext: MABL BL TG HGER FHWX.
+   Chi-Square: 4.7609
+
+8. Key: IJKLMNOPQRSTUVWXYZABCDEFGH{▀ 
+   Plaintext: ESTD TD LY ZYWJ XZOP.
+   Chi-Square: 6.3476
+
+9. Key: KLMNOPQRSTUVWXYZABCDEFGHIJ{▀ 
+   Plaintext: GUVF VF NA BAYL ZBQR.
+   Chi-Square: 7.5272
+
+10. Key: PQRSTUVWXYZABCDEFGHIJKLMNO{▀ 
+   Plaintext: LZAK AK SF GFDQ EGVW.
+   Chi-Square: 7.7744
