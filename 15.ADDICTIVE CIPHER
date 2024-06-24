@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+
+// Function to count occurrences of each letter in the given text
+void countLetterFrequency(const char *text, int freq[]) {
+    int len = strlen(text);
+    for (int i = 0; i < len; ++i) {
+        char ch = toupper(text[i]);
+        if (isalpha(ch)) {
+            freq[ch - 'A']++;
+        }
+    }
+}
+
+// Function to perform additive cipher decryption with a given key
+void decryptAdditiveCipher(const char *ciphertext, int key, char *plaintext) {
+    int len = strlen(ciphertext);
+    for (int i = 0; i < len; ++i) {
+        char ch = ciphertext[i];
+        if (isalpha(ch)) {
+            char decrypted_char = 'A' + (ch - 'A' - key + ALPHABET_SIZE) % ALPHABET_SIZE;
+            plaintext[i] = decrypted_char;
+        } else {
+            plaintext[i] = ch; // Non-alphabetic characters remain unchanged
+        }
+    }
+    plaintext[len] = '\0'; // Add null terminator to end the string
+}
+
+// Function to perform frequency analysis attack and print top possible plaintexts
+void frequencyAttack(const char *ciphertext, int top) {
+    int freq[ALPHABET_SIZE] = {0};
+    countLetterFrequency(ciphertext, freq);
+    
+    // Find the most frequent letter in the ciphertext
+    int max_freq = 0;
+    int max_index = 0;
+    for (int i = 0; i < ALPHABET_SIZE; ++i) {
+        if (freq[i] > max_freq) {
+            max_freq = freq[i];
+            max_index = i;
+        }
+    }
+    
+    // Assuming the most frequent letter is 'E' (which is most common in English)
+    // Decrypt using key = (ciphertext_letter - 'E') % 26
+    int key = (max_index - ('E' - 'A') + ALPHABET_SIZE) % ALPHABET_SIZE;
+    
+    // Decrypt ciphertext using the key and print the result
+    char plaintext[strlen(ciphertext) + 1];
+    decryptAdditiveCipher(ciphertext, key, plaintext);
+    
+    printf("Top possible plaintexts (in order of likelihood):\n");
+    printf("Key = %d\n", key);
+    printf("1. %s\n", plaintext);
+    
+    // Print additional top plaintexts if specified
+    for (int i = 2; i <= top; ++i) {
+        // Decrypt using shifted key values for further analysis
+        key = (key + 1) % ALPHABET_SIZE;
+        decryptAdditiveCipher(ciphertext, key, plaintext);
+        printf("%d. %s\n", i, plaintext);
+    }
+}
+
+int main() {
+    char ciphertext[] = "Zpv xibu, bu uif hbnf jt b hppe hbnf jt ibse up kfu."; // Example ciphertext
+    int top = 10; // Number of top possible plaintexts to display
+    
+    printf("Performing letter frequency attack on the additive cipher:\n");
+    printf("Ciphertext: %s\n\n", ciphertext);
+    
+    frequencyAttack(ciphertext, top);
+    
+    return 0;
+}
+
+OUTPUT:
+Performing letter frequency attack on the additive cipher:
+Ciphertext: Zpv xibu, bu uif hbnf jt b hppe hbnf jt ibse up kfu.
+
+Top possible plaintexts (in order of likelihood):
+Key = 23
+1. CYE GRKD, KD DRO QKWO SC K QYYN QKWO SC RKBN DY TOD.
+2. BXD FQJC, JC CQN PJVN RB J PXXM PJVN RB QJAM CX SNC.
+3. AWC EPIB, IB BPM OIUM QA I OWWL OIUM QA PIZL BW RMB.
+4. ZVB DOHA, HA AOL NHTL PZ H NVVK NHTL PZ OHYK AV QLA.
+5. YUA CNGZ, GZ ZNK MGSK OY G MUUJ MGSK OY NGXJ ZU PKZ.
+6. XTZ BMFY, FY YMJ LFRJ NX F LTTI LFRJ NX MFWI YT OJY.
+7. WSY ALEX, EX XLI KEQI MW E KSSH KEQI MW LEVH XS NIX.
+8. VRX ZKDW, DW WKH JDPH LV D JRRG JDPH LV KDUG WR MHW.
+9. UQW YJCV, CV VJG ICOG KU C IQQF ICOG KU JCTF VQ LGV.
+10. TPV XIBU, BU UIF HBNF JT B HPPE HBNF JT IBSE UP KFU.
