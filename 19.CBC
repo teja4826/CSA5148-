@@ -1,0 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/des.h>
+
+#define DATA_SIZE 1024
+#define KEY_SIZE 24
+#define IV_SIZE DES_BLOCK_SIZE
+
+void print_hex(const char *label, const unsigned char *data, size_t len) {
+    printf("%s: ", label);
+    for (size_t i = 0; i < len; ++i) {
+        printf("%02X ", data[i]);
+    }
+    printf("\n");
+}
+
+void encrypt_3des_cbc(const unsigned char *plaintext, int plaintext_len,
+                      const unsigned char *key, const unsigned char *iv,
+                      unsigned char *ciphertext) {
+    DES_cblock des_key1, des_key2, des_key3;
+    DES_key_schedule ks1, ks2, ks3;
+
+    // Split the 24-byte key into three 8-byte keys
+    memcpy(&des_key1, key, 8);
+    memcpy(&des_key2, key + 8, 8);
+    memcpy(&des_key3, key + 16, 8);
+
+    // Set encryption keys
+    DES_set_key_checked(&des_key1, &ks1);
+    DES_set_key_checked(&des_key2, &ks2);
+    DES_set_key_checked(&des_key3, &ks3);
+
+    DES_cblock ivec;
+    memcpy(ivec, iv, sizeof(DES_cblock));
+
+    // Encrypt in CBC mode
+    DES_ede3_cbc_encrypt(plaintext, ciphertext, plaintext_len, &ks1, &ks2, &ks3, &ivec, DES_ENCRYPT);
+}
+
+int main() {
+    // Example plaintext
+    const char *plaintext = "Hello, this is a secret message.";
+
+    // Example 24-byte key (Triple DES)
+    const unsigned char key[KEY_SIZE] = {
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+        0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+        0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67
+    };
+
+    // Example initialization vector (IV)
+    const unsigned char iv[IV_SIZE] = {
+        0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF
+    };
+
+    unsigned char ciphertext[DATA_SIZE];
+    int plaintext_len = strlen(plaintext);
+
+    // Encrypt using 3DES in CBC mode
+    encrypt_3des_cbc((unsigned char *)plaintext, plaintext_len, key, iv, ciphertext);
+
+    // Print plaintext and ciphertext in hex
+    printf("Plaintext: %s\n", plaintext);
+    print_hex("Ciphertext", ciphertext, plaintext_len);
+
+    return 0;
+}
