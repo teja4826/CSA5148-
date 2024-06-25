@@ -1,0 +1,79 @@
+#include <stdio.h>
+#include <string.h>
+#define BLOCK_SIZE 16
+void xor_blocks(const unsigned char *a, const unsigned char *b, unsigned char *out) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        out[i] = a[i] ^ b[i];
+    }
+}
+void encrypt_block(const unsigned char *input, unsigned char *output, const unsigned char *key) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        output[i] = input[i] ^ key[i];
+    }
+}
+void cbc_mac(const unsigned char *key, const unsigned char *message, int num_blocks, unsigned char *mac) {
+    unsigned char current_block[BLOCK_SIZE];
+    unsigned char cipher_block[BLOCK_SIZE];
+    memset(current_block, 0, BLOCK_SIZE); 
+    for (int i = 0; i < num_blocks; i++) {
+        xor_blocks(current_block, message + i * BLOCK_SIZE, current_block);
+        encrypt_block(current_block, cipher_block, key);
+        memcpy(current_block, cipher_block, BLOCK_SIZE);
+    }
+    memcpy(mac, current_block, BLOCK_SIZE);
+}
+int main() {
+    unsigned char key[BLOCK_SIZE] = {0}; 
+    unsigned char X[BLOCK_SIZE] = {0}; 
+    unsigned char T[BLOCK_SIZE]; 
+    unsigned char X_XOR_T[BLOCK_SIZE];
+    unsigned char two_block_message[2 * BLOCK_SIZE];
+    unsigned char T2[BLOCK_SIZE];
+    printf("Enter 16-byte message X in hex (32 hex characters): ");
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        unsigned int value;
+        scanf("%2x", &value);
+        X[i] = (unsigned char)value;
+    }
+    cbc_mac(key, X, 1, T);
+    xor_blocks(X, T, X_XOR_T);
+    memcpy(two_block_message, X, BLOCK_SIZE);
+    memcpy(two_block_message + BLOCK_SIZE, X_XOR_T, BLOCK_SIZE);
+    cbc_mac(key, two_block_message, 2, T2);
+    printf("MAC(K, X) = T: ");
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        printf("%02x", T[i]);
+    }
+    printf("\n");
+    printf("X ? T: ");
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        printf("%02x", X_XOR_T[i]);
+    }
+    printf("\n");
+    printf("MAC for two-block message X || (X ? T): ");
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        printf("%02x", T2[i]);
+    }
+    printf("\n");
+    return 0;
+}
+output :
+Enter 16-byte message X in hex (32 hex characters): 23
+4
+5
+6
+7
+8
+9
+1
+2
+3
+4
+5
+6
+7
+8
+9
+MAC(K, X) = T: 23040506070809010203040506070809
+X ? T: 00000000000000000000000000000000
+MAC for two-block message X || (X ? T): 23040506070809010203040506070809
